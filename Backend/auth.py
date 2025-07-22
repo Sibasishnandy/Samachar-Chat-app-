@@ -117,52 +117,84 @@ def get_all_users():
     user_list = list(users)
     return jsonify(user_list), 200
 
+@app.route('/unread_count/<email>', methods=['GET'])
+def get_unread_counts(email):
+    pipeline = [
+        {"$match": {"receiver": email, "is_read": False}},
+        {"$group": {"_id": "$sender", "count": {"$sum": 1}}}
+    ]
+    counts = list(messages_samachar.aggregate(pipeline))
+    return jsonify(counts), 200
+
 
 # ===================Chat history==================== #
 @app.route('/get_messages/<sender>/<receiver>', methods=['GET'])
 def get_messages(sender, receiver):
-    chats = messages_samachar.find({
+    chats = list(messages_samachar.find({
         "$or": [
             {"sender": sender, "receiver": receiver},
             {"sender": receiver, "receiver": sender}
         ]
-    }).sort("timestamp", 1)
+    }).sort("timestamp", 1))
 
-    message_list = []
+    # Mark receiver's messages from sender as read
+    messages_samachar.update_many(
+        {"sender": receiver, "receiver": sender, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+
     for msg in chats:
-        msg['_id'] = str(msg['_id'])  # converting ObjectId to string
-        message_list.append(msg)
-    return jsonify(message_list), 200
+        msg['_id'] = str(msg['_id'])
+    return jsonify(chats), 200
+
 
 
 # ===================Socket Events==================== #
 
 @socketio.on('user_connected')
 def handle_user_connected(email):
+    print(f"User connected: {email}")
     online_users[email] = request.sid
-    emit('update_online_users', list(online_users.keys()), broadcast=True)
+    emit("update_online_users", list(online_users.keys()), broadcast=True)
+
+    # Find unseen messages
+    unseen_msgs = list(messages_samachar.find({
+        "receiver": email
+    }))
+
+    print(f"Sending {len(unseen_msgs)} missed messages to {email}")
+
+    for msg in unseen_msgs:
+        emit("receive_message", {
+            "sender": msg["sender"],
+            "receiver": msg["receiver"],
+            "text": msg["text"],
+            "timestamp": msg["timestamp"]
+        }, to=request.sid)
+
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    # saving the message in the database
     print("Message received on backend:", data)
     message = {
         "sender": data["sender"],
         "receiver": data["receiver"],
         "text": data["text"],
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "is_read": False  # NEW: Unread by default
     }
     messages_samachar.insert_one(message)
 
-    # if receiver is online, send the message in real-time
+    # Emit to receiver if online
     receiver_sid = online_users.get(data["receiver"])
     if receiver_sid:
         emit('receive_message', message, to=receiver_sid)
 
-    # also send to sender to show instantly
+    # Emit to sender for instant feedback
     sender_sid = online_users.get(data["sender"])
     if sender_sid:
         emit('receive_message', message, to=sender_sid)
+
 
 @socketio.on('disconnect')
 def handle_disconnect():

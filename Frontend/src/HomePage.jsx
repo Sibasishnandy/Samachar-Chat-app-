@@ -1,11 +1,9 @@
-// src/HomePage.jsx
 import { useState, useEffect, useRef } from "react";
 import "./HomePage.css";
 import defaultAvatar from "./Assets/default-avatar.png";
 import io from "socket.io-client";
 
-// Connect to backend
-const socket = io("http://localhost:5000");
+const socket = io("http://localhost:5000", { autoConnect: false });
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
@@ -14,10 +12,12 @@ export default function HomePage() {
   const [selectedContact, setSelectedContact] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [notifications, setNotifications] = useState({});
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [newMessageHighlight, setNewMessageHighlight] = useState({});
 
   const chatEndRef = useRef(null);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -27,6 +27,7 @@ export default function HomePage() {
     setUser(storedUser);
 
     if (storedUser) {
+      socket.connect();
       socket.emit("user_connected", storedUser.email);
 
       fetch("http://localhost:5000/getallusers_api")
@@ -35,29 +36,54 @@ export default function HomePage() {
           const otherUsers = data.filter((u) => u.email !== storedUser.email);
           setContacts(otherUsers);
         });
+
+socket.on("receive_message", (msg) => {
+  console.log("New socket message:", msg);
+
+  const isChatOpen =
+    (msg.sender === user?.email && msg.receiver === selectedContact?.email) ||
+    (msg.sender === selectedContact?.email && msg.receiver === user?.email);
+
+  if (isChatOpen) {
+    setMessages((prev) => [...prev, msg]);
+  }
+
+  // ✅ Show notification ONLY if current user is the receiver
+  if (msg.receiver === user?.email) {
+    if (!isChatOpen) {
+      setNotifications((prev) => ({
+        ...prev,
+        [msg.sender]: (prev[msg.sender] || 0) + 1,
+      }));
+
+      setNewMessageHighlight((prev) => ({
+        ...prev,
+        [msg.sender]: true,
+      }));
+    }
+  }
+});
+
+
+      socket.on("update_online_users", (users) => {
+        setOnlineUsers(users);
+      });
     }
 
-    socket.on("receive_message", (msg) => {
-      if (
-        (msg.sender === user?.email && msg.receiver === selectedContact?.email) ||
-        (msg.sender === selectedContact?.email && msg.receiver === user?.email)
-      ) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    });
+    return () => socket.disconnect();
+  }, []);
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [selectedContact]);
-
-  // Load messages when contact is selected
   useEffect(() => {
     if (user && selectedContact) {
       fetch(`http://localhost:5000/get_messages/${user.email}/${selectedContact.email}`)
         .then((res) => res.json())
         .then((data) => {
           setMessages(data);
+          setNotifications((prev) => {
+            const updated = { ...prev };
+            delete updated[selectedContact.email];
+            return updated;
+          });
         });
     }
   }, [selectedContact]);
@@ -70,10 +96,9 @@ export default function HomePage() {
       receiver: selectedContact.email,
       text: newMessage,
     };
-    // console.log("Sending message via socket:", msg);
+
     socket.emit("send_message", msg);
 
-    // Show message instantly in UI
     setMessages((prev) => [
       ...prev,
       {
@@ -81,7 +106,6 @@ export default function HomePage() {
         timestamp: new Date().toISOString(),
       },
     ]);
-
     setNewMessage("");
   };
 
@@ -91,7 +115,6 @@ export default function HomePage() {
 
   return (
     <div className="container">
-      {/* Right Section: Contact List */}
       <div className="right_section">
         <h2>Contacts</h2>
         <input
@@ -105,21 +128,33 @@ export default function HomePage() {
           {filteredContacts.map((contact) => (
             <li
               key={contact.email}
-              className={`contact_item ${selectedContact?.email === contact.email ? "active" : ""}`}
-              onClick={() => setSelectedContact(contact)}
+              className={`contact_item ${selectedContact?.email === contact.email ? "active" : ""} ${newMessageHighlight[contact.email] ? "highlight" : ""}`}
+              onClick={() => {
+                setSelectedContact(contact);
+                setNewMessageHighlight((prev) => {
+                  const updated = { ...prev };
+                  delete updated[contact.email];
+                  return updated;
+                });
+              }}
             >
               <img
                 src={contact.profile_pic || defaultAvatar}
                 alt={contact.full_name}
                 className="contact-img"
               />
-              <span>{contact.full_name}</span>
+              <div className="contact-info">
+                <span>{contact.full_name}</span>
+                <span className={`status-dot ${onlineUsers.includes(contact.email) ? "online" : "offline"}`}></span>
+              </div>
+              {notifications[contact.email] && (
+                <span className="notification-badge">{notifications[contact.email]}</span>
+              )}
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Left Section: Chat Area */}
       <div className="left_section">
         {selectedContact ? (
           <div className="chat-container">
@@ -139,7 +174,10 @@ export default function HomePage() {
                 >
                   <p>{msg.text}</p>
                   <span className="timestamp">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
+                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </span>
                 </div>
               ))}
@@ -158,11 +196,7 @@ export default function HomePage() {
           </div>
         ) : user ? (
           <div className="welcome-screen">
-            <img
-              src={user.profile_pic || defaultAvatar}
-              alt="Profile"
-              className="profile-img"
-            />
+            <img src={user.profile_pic || defaultAvatar} alt="Profile" className="profile-img" />
             <h2>Welcome, {user.full_name}</h2>
             <p>{user.email}</p>
           </div>
