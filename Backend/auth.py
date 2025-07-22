@@ -117,19 +117,28 @@ def get_all_users():
     user_list = list(users)
     return jsonify(user_list), 200
 
-@app.route('/unread_count/<email>', methods=['GET'])
+@app.route('/unread_counts/<email>', methods=['GET'])
 def get_unread_counts(email):
+    # Aggregate count of unread messages grouped by sender
     pipeline = [
         {"$match": {"receiver": email, "is_read": False}},
         {"$group": {"_id": "$sender", "count": {"$sum": 1}}}
     ]
-    counts = list(messages_samachar.aggregate(pipeline))
-    return jsonify(counts), 200
+    result = list(messages_samachar.aggregate(pipeline))
+    unread_map = {entry["_id"]: entry["count"] for entry in result}
+    return jsonify(unread_map), 200
 
 
 # ===================Chat history==================== #
 @app.route('/get_messages/<sender>/<receiver>', methods=['GET'])
 def get_messages(sender, receiver):
+    # 1. Mark all messages from receiver to sender as read
+    messages_samachar.update_many(
+        {"sender": receiver, "receiver": sender, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+
+    # 2. Then fetch the updated chat
     chats = list(messages_samachar.find({
         "$or": [
             {"sender": sender, "receiver": receiver},
@@ -137,15 +146,10 @@ def get_messages(sender, receiver):
         ]
     }).sort("timestamp", 1))
 
-    # Mark receiver's messages from sender as read
-    messages_samachar.update_many(
-        {"sender": receiver, "receiver": sender, "is_read": False},
-        {"$set": {"is_read": True}}
-    )
-
     for msg in chats:
         msg['_id'] = str(msg['_id'])
     return jsonify(chats), 200
+
 
 
 
@@ -153,7 +157,6 @@ def get_messages(sender, receiver):
 
 @socketio.on('user_connected')
 def handle_user_connected(email):
-    print(f"User connected: {email}")
     online_users[email] = request.sid
     emit("update_online_users", list(online_users.keys()), broadcast=True)
 

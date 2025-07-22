@@ -30,6 +30,7 @@ export default function HomePage() {
       socket.connect();
       socket.emit("user_connected", storedUser.email);
 
+      // Get all users
       fetch("http://localhost:5000/getallusers_api")
         .then((res) => res.json())
         .then((data) => {
@@ -37,41 +38,47 @@ export default function HomePage() {
           setContacts(otherUsers);
         });
 
-socket.on("receive_message", (msg) => {
-  console.log("New socket message:", msg);
+      // Get unread message counts
+      fetch(`http://localhost:5000/unread_counts/${storedUser.email}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setNotifications(data); // { senderEmail: count }
+        });
 
-  const isChatOpen =
-    (msg.sender === user?.email && msg.receiver === selectedContact?.email) ||
-    (msg.sender === selectedContact?.email && msg.receiver === user?.email);
+      // Listen for real-time messages
+      socket.on("receive_message", (msg) => {
+        console.log("New socket message:", msg);
 
-  if (isChatOpen) {
-    setMessages((prev) => [...prev, msg]);
-  }
+        const isChatOpen =
+          (msg.sender === user?.email && msg.receiver === selectedContact?.email) ||
+          (msg.sender === selectedContact?.email && msg.receiver === user?.email);
 
-  // ✅ Show notification ONLY if current user is the receiver
-  if (msg.receiver === user?.email) {
-    if (!isChatOpen) {
-      setNotifications((prev) => ({
-        ...prev,
-        [msg.sender]: (prev[msg.sender] || 0) + 1,
-      }));
+        if (isChatOpen) {
+          setMessages((prev) => [...prev, msg]);
+        }
 
-      setNewMessageHighlight((prev) => ({
-        ...prev,
-        [msg.sender]: true,
-      }));
-    }
-  }
-});
+        // Only increment unread count if this user is the receiver and chat not open
+        if (msg.receiver === user?.email && !isChatOpen) {
+          setNotifications((prev) => ({
+            ...prev,
+            [msg.sender]: (prev[msg.sender] || 0) + 1,
+          }));
 
+          setNewMessageHighlight((prev) => ({
+            ...prev,
+            [msg.sender]: true,
+          }));
+        }
+      });
 
+      // Online user list
       socket.on("update_online_users", (users) => {
         setOnlineUsers(users);
       });
     }
 
     return () => socket.disconnect();
-  }, []);
+  }, [selectedContact]);
 
   useEffect(() => {
     if (user && selectedContact) {
@@ -85,6 +92,12 @@ socket.on("receive_message", (msg) => {
             return updated;
           });
         });
+
+      setNewMessageHighlight((prev) => {
+        const updated = { ...prev };
+        delete updated[selectedContact.email];
+        return updated;
+      });
     }
   }, [selectedContact]);
 
@@ -129,14 +142,7 @@ socket.on("receive_message", (msg) => {
             <li
               key={contact.email}
               className={`contact_item ${selectedContact?.email === contact.email ? "active" : ""} ${newMessageHighlight[contact.email] ? "highlight" : ""}`}
-              onClick={() => {
-                setSelectedContact(contact);
-                setNewMessageHighlight((prev) => {
-                  const updated = { ...prev };
-                  delete updated[contact.email];
-                  return updated;
-                });
-              }}
+              onClick={() => setSelectedContact(contact)}
             >
               <img
                 src={contact.profile_pic || defaultAvatar}
@@ -147,8 +153,10 @@ socket.on("receive_message", (msg) => {
                 <span>{contact.full_name}</span>
                 <span className={`status-dot ${onlineUsers.includes(contact.email) ? "online" : "offline"}`}></span>
               </div>
-              {notifications[contact.email] && (
-                <span className="notification-badge">{notifications[contact.email]}</span>
+              {notifications[contact.email] > 0 && (
+                <span className="notification-badge">
+                  {notifications[contact.email]}
+                </span>
               )}
             </li>
           ))}
