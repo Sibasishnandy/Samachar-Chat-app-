@@ -1,0 +1,183 @@
+/* Reset and Body */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: Arial, sans-serif;
+  background: #100c1c;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Split Layout */
+.split-screen {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Left: Login Section */
+.login-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom right, rgba(28, 15, 47, 0.6), rgba(16, 12, 28, 0.6));
+  color: white;
+}
+
+.login-card {
+  width: 350px;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.05); /* translucent white */
+  border-radius: 15px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  text-align: center;
+  transition: all 0.4s ease-in-out;
+}
+
+
+.login-card h2 {
+  margin-bottom: 20px;
+  color: #e0c7ff;
+}
+
+.input-field {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #5a2c91;
+  border-radius: 5px;
+  background: #2a103d;
+  color: #fff;
+  font-size: 16px;
+}
+
+.input-field::placeholder {
+  color: #b08adf;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #8e2de2, #4a00e0);
+  color: white;
+  border: none;
+  font-size: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 12px rgba(138, 43, 226, 0.4);
+}
+
+.submit-button:hover {
+  background: linear-gradient(135deg, #b12eff, #5e00e0);
+  transform: scale(1.03);
+}
+
+.register-text {
+  color: #c9a9f7;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+.register-text a {
+  color: #d58aff;
+  text-decoration: none;
+}
+
+.register-text a:hover {
+  text-decoration: underline;
+}
+
+/* Right: 3D Cube Section */
+.model-section {
+  flex: 1;
+  background: linear-gradient(to bottom right, #18022c, #1c0129);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 800px;
+}
+
+.cube-wrapper {
+  width: 200px;
+  height: 200px;
+  perspective: 1000px;
+}
+
+.cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: rotateCube 10s infinite linear;
+  transition: transform 0.5s ease;
+}
+
+.cube:hover {
+  animation-play-state: paused;
+}
+
+/* Cube Faces */
+.face {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: rgba(165, 90, 255, 0.6);
+  border: 2px solid #c8a2ff;
+  color: white;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.5s ease;
+  text-shadow: 0 0 5px #fff;
+}
+
+/* Default Positions */
+.front  { transform: rotateY(0deg)   translateZ(100px); }
+.back   { transform: rotateY(180deg) translateZ(100px); }
+.right  { transform: rotateY(90deg)  translateZ(100px); }
+.left   { transform: rotateY(-90deg) translateZ(100px); }
+.top    { transform: rotateX(90deg)  translateZ(100px); }
+.bottom { transform: rotateX(-90deg) translateZ(100px); }
+
+/* Hover - Explode */
+.cube:hover .front  { transform: rotateY(0deg)   translateZ(200px); }
+.cube:hover .back   { transform: rotateY(180deg) translateZ(200px); }
+.cube:hover .right  { transform: rotateY(90deg)  translateZ(200px); }
+.cube:hover .left   { transform: rotateY(-90deg) translateZ(200px); }
+.cube:hover .top    { transform: rotateX(90deg)  translateZ(200px); }
+.cube:hover .bottom { transform: rotateX(-90deg) translateZ(200px); }
+
+@keyframes rotateCube {
+  from {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(360deg) rotateY(360deg);
+  }
+}
+
+
+
+
+
+@keyframes colorShift {
+  0%   { background-color: rgba(165, 90, 255, 0.6); }
+  25%  { background-color: rgba(190, 120, 255, 0.6); }
+  50%  { background-color: rgba(140, 80, 220, 0.6); }
+  75%  { background-color: rgba(110, 70, 180, 0.6); }
+  100% { background-color: rgba(165, 90, 255, 0.6); }
+}
+
+/* Apply the animation to all cube faces */
+.face {
+  animation: colorShift 6s infinite ease-in-out;
+}

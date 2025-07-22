@@ -1,0 +1,14 @@
+Flask
+flask-cors
+bcrypt
+python-dotenv
+PyJWT
+pymongo
+cloudinary
+Flask
+Flask-Cors
+Flask-SocketIO
+python-socketio
+eventlet
+pymongo
+dnspython

@@ -1,0 +1,165 @@
+/* Main Page Styling */
+.register-page {
+  display: flex;
+  height: 100vh;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to right, #0d0d1a, #220033);
+  padding: 40px;
+}
+
+/* Form Container */
+.form-container {
+  backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 50px 60px;
+  border-radius: 20px;
+  box-shadow: 0 0 20px #5200a8;
+  width: 100%;
+  max-width: 800px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  color: white;
+}
+
+/* Heading */
+.form-container h2 {
+  grid-column: span 2;
+  text-align: center;
+  margin-bottom: 10px;
+  color: #d9b3ff;
+}
+
+/* Form Grid */
+form {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 40px;
+}
+
+/* Input Groups */
+.input-group {
+  position: relative;
+  width: 100%;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 14px 12px 14px 12px;
+  background: #190033;
+  border: 1px solid #5200a8;
+  border-radius: 8px;
+  color: white;
+  outline: none;
+}
+
+.input-group input:focus {
+  border-color: #bb66ff;
+  box-shadow: 0 0 8px #a64dff;
+}
+
+.input-group label {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  background: transparent;
+  color: #aaa;
+  font-size: 14px;
+  transition: 0.3s;
+  pointer-events: none;
+}
+
+.input-group input:focus + label,
+.input-group input:not(:placeholder-shown) + label {
+  top: -8px;
+  left: 10px;
+  background: #220033;
+  font-size: 12px;
+  color: #bb66ff;
+  padding: 0 4px;
+}
+
+/* Submit Button */
+button[type="submit"] {
+  grid-column: span 2;
+  padding: 14px;
+  background: linear-gradient(to right, #6a00ff, #a64dff);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px #a64dff;
+}
+
+/* Bottom Text */
+.form-container p {
+  grid-column: span 2;
+  text-align: center;
+  font-size: 14px;
+  color: #d1b3ff;
+}
+
+.form-container a {
+  color: #bb66ff;
+  text-decoration: none;
+}
+
+/* Avatar Upload Section */
+.avatar-upload {
+  grid-column: span 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  flex-direction: column;
+}
+
+.avatar-upload input[type="file"] {
+  display: none;
+}
+
+/* Avatar Image */
+.avatar-wrapper {
+  position: relative;
+  width: 110px;
+  height: 110px;
+}
+
+.avatar {
+  width: 110px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #a64dff;
+  box-shadow: 0 0 10px rgba(166, 77, 255, 0.7);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+}
+
+/* Camera Icon Overlay (Optional) */
+.camera-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #6a00ff;
+  border-radius: 50%;
+  padding: 5px;
+  font-size: 16px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(166, 77, 255, 0.6);
+}
