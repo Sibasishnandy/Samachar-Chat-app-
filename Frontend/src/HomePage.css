@@ -165,7 +165,6 @@
   color: #fff;
 }
 
-
 .status-dot {
   width: 10px;
   height: 10px;
@@ -183,18 +182,13 @@
 .status-dot.offline {
   background: gray;
 }
-.contact_item.highlight {
-  border: 2px solid #00ff6a;
-  box-shadow: 0 0 10px #00ff6a;
-  transition: 0.3s;
-}
+
 .contact_item.highlight {
   border-left: 5px solid #00ff6a;
   background-color: rgba(0, 255, 106, 0.05);
 }
+
 .unread-glow {
   box-shadow: 0 0 10px 3px limegreen;
+  transition: box-shadow 0.3s ease;
 }
-
-
-

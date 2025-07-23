@@ -14,14 +14,14 @@ export default function HomePage() {
   const [newMessage, setNewMessage] = useState("");
   const [notifications, setNotifications] = useState({});
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [newMessageHighlight, setNewMessageHighlight] = useState({});
-
   const chatEndRef = useRef(null);
 
+  // Scroll to latest message
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Initial load
   useEffect(() => {
     const storedUser = JSON.parse(localStorage.getItem("user"));
     setUser(storedUser);
@@ -30,48 +30,40 @@ export default function HomePage() {
       socket.connect();
       socket.emit("user_connected", storedUser.email);
 
-      // Get all users
       fetch("http://localhost:5000/getallusers_api")
         .then((res) => res.json())
         .then((data) => {
-          const otherUsers = data.filter((u) => u.email !== storedUser.email);
-          setContacts(otherUsers);
+          const others = data.filter((u) => u.email !== storedUser.email);
+          setContacts(others);
         });
 
-      // Get unread message counts
-      fetch(`http://localhost:5000/unread_counts/${storedUser.email}`)
+      fetch(`http://localhost:5000/unread_count/${storedUser.email}`)
         .then((res) => res.json())
         .then((data) => {
-          setNotifications(data); // { senderEmail: count }
+          const notif = {};
+          data.forEach((item) => {
+            notif[item._id] = item.count;
+          });
+          setNotifications(notif);
         });
 
-      // Listen for real-time messages
       socket.on("receive_message", (msg) => {
-        console.log("New socket message:", msg);
-
-        const isChatOpen =
+        const chatOpen =
           (msg.sender === user?.email && msg.receiver === selectedContact?.email) ||
           (msg.sender === selectedContact?.email && msg.receiver === user?.email);
 
-        if (isChatOpen) {
+        if (chatOpen) {
           setMessages((prev) => [...prev, msg]);
         }
 
-        // Only increment unread count if this user is the receiver and chat not open
-        if (msg.receiver === user?.email && !isChatOpen) {
+        if (msg.receiver === user?.email && !chatOpen) {
           setNotifications((prev) => ({
             ...prev,
             [msg.sender]: (prev[msg.sender] || 0) + 1,
           }));
-
-          setNewMessageHighlight((prev) => ({
-            ...prev,
-            [msg.sender]: true,
-          }));
         }
       });
 
-      // Online user list
       socket.on("update_online_users", (users) => {
         setOnlineUsers(users);
       });
@@ -80,6 +72,7 @@ export default function HomePage() {
     return () => socket.disconnect();
   }, [selectedContact]);
 
+  // Load chat messages and clear notifications
   useEffect(() => {
     if (user && selectedContact) {
       fetch(`http://localhost:5000/get_messages/${user.email}/${selectedContact.email}`)
@@ -92,12 +85,6 @@ export default function HomePage() {
             return updated;
           });
         });
-
-      setNewMessageHighlight((prev) => {
-        const updated = { ...prev };
-        delete updated[selectedContact.email];
-        return updated;
-      });
     }
   }, [selectedContact]);
 
@@ -114,11 +101,9 @@ export default function HomePage() {
 
     setMessages((prev) => [
       ...prev,
-      {
-        ...msg,
-        timestamp: new Date().toISOString(),
-      },
+      { ...msg, timestamp: new Date().toISOString() }
     ]);
+
     setNewMessage("");
   };
 
@@ -141,7 +126,9 @@ export default function HomePage() {
           {filteredContacts.map((contact) => (
             <li
               key={contact.email}
-              className={`contact_item ${selectedContact?.email === contact.email ? "active" : ""} ${newMessageHighlight[contact.email] ? "highlight" : ""}`}
+              className={`contact_item 
+                ${selectedContact?.email === contact.email ? "active" : ""} 
+                ${notifications[contact.email] > 0 ? "highlight" : ""}`}
               onClick={() => setSelectedContact(contact)}
             >
               <img
@@ -151,7 +138,11 @@ export default function HomePage() {
               />
               <div className="contact-info">
                 <span>{contact.full_name}</span>
-                <span className={`status-dot ${onlineUsers.includes(contact.email) ? "online" : "offline"}`}></span>
+                <span
+                  className={`status-dot ${
+                    onlineUsers.includes(contact.email) ? "online" : "offline"
+                  }`}
+                ></span>
               </div>
               {notifications[contact.email] > 0 && (
                 <span className="notification-badge">
