@@ -3,7 +3,7 @@ import "./HomePage.css";
 import defaultAvatar from "./Assets/default-avatar.png";
 import io from "socket.io-client";
 
-const socket = io("http://localhost:5000", { autoConnect: false });
+const socket = io("https://samachar-chat-app-uo4y.onrender.com", { autoConnect: false });
 
 export default function HomePage() {
   const [user, setUser] = useState(null);
@@ -30,14 +30,14 @@ export default function HomePage() {
       socket.connect();
       socket.emit("user_connected", storedUser.email);
 
-      fetch("http://localhost:5000/getallusers_api")
+      fetch("https://samachar-chat-app-uo4y.onrender.com/getallusers_api")
         .then((res) => res.json())
         .then((data) => {
           const others = data.filter((u) => u.email !== storedUser.email);
           setContacts(others);
         });
 
-      fetch(`http://localhost:5000/unread_count/${storedUser.email}`)
+      fetch(`https://samachar-chat-app-uo4y.onrender.com/unread_count/${storedUser.email}`)
         .then((res) => res.json())
         .then((data) => {
           const notif = {};
@@ -75,7 +75,7 @@ export default function HomePage() {
   // Load chat messages and clear notifications
   useEffect(() => {
     if (user && selectedContact) {
-      fetch(`http://localhost:5000/get_messages/${user.email}/${selectedContact.email}`)
+      fetch(`https://samachar-chat-app-uo4y.onrender.com/get_messages/${user.email}/${selectedContact.email}`)
         .then((res) => res.json())
         .then((data) => {
           setMessages(data);
