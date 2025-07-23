@@ -4,42 +4,46 @@ from flask_cors import CORS
 import bcrypt
 import cloudinary
 import cloudinary.uploader
-from cloudinary.utils import cloudinary_url
 from flask_socketio import SocketIO, emit
 from datetime import datetime, timezone
+import os
+from dotenv import load_dotenv
 import eventlet
+
+load_dotenv()
 
 # Cloudinary config
 cloudinary.config(
-    cloud_name="dselreycf",
-    api_key="123755886523836",
-    api_secret="ADLgppPThxqdCC5ifkrvrYaxPeo",
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
     secure=True
 )
 
+# Flask setup
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # MongoDB setup
-MONGODB_URI = "mongodb+srv://sibasishnandy:EkG8zHumLfR7Q1w3@sibasishmongocluster.nphnenz.mongodb.net/"
+MONGODB_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGODB_URI)
 db = client["Samachar"]
 registration_samachar = db["registration_samachar"]
 messages_samachar = db["messages_samachar"]
 
-# In-memory online user tracking
+# Online user tracking
 online_users = {}
 
-# Hash password
+# Password utils
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-# Check password
 def check_password(password, hashed):
     return bcrypt.checkpw(password.encode('utf-8'), hashed)
 
-# ================= Registration ================= #
+# ============ API Routes ============ #
+
 @app.route('/registration_api', methods=['POST'])
 def registration_samachar_function():
     full_name = request.form.get("full_name")
@@ -72,7 +76,6 @@ def registration_samachar_function():
         "profile_pic": image_url
     }), 201
 
-# ================= Login ================= #
 @app.route('/login_api', methods=['POST'])
 def login_samachar_function():
     data = request.json
@@ -90,13 +93,11 @@ def login_samachar_function():
         "profile_pic": user["profile_pic"]
     }), 200
 
-# ========== All Users ========== #
 @app.route('/getallusers_api', methods=['GET'])
 def get_all_users():
     users = registration_samachar.find({}, {"_id": 0, "full_name": 1, "email": 1, "profile_pic": 1})
     return jsonify(list(users)), 200
 
-# ========== Unread Count ========== #
 @app.route('/unread_count/<email>', methods=['GET'])
 def get_unread_counts(email):
     pipeline = [
@@ -106,7 +107,6 @@ def get_unread_counts(email):
     counts = list(messages_samachar.aggregate(pipeline))
     return jsonify(counts), 200
 
-# ========== Chat History ========== #
 @app.route('/get_messages/<sender>/<receiver>', methods=['GET'])
 def get_messages(sender, receiver):
     messages_samachar.update_many(
@@ -125,7 +125,8 @@ def get_messages(sender, receiver):
         msg['_id'] = str(msg['_id'])
     return jsonify(chats), 200
 
-# ========== Socket Events ========== #
+# ============ Socket Events ============ #
+
 @socketio.on('user_connected')
 def handle_user_connected(email):
     online_users[email] = request.sid
@@ -135,8 +136,6 @@ def handle_user_connected(email):
         "receiver": email,
         "is_read": False
     }))
-
-    print(f"Sending {len(unseen_msgs)} missed messages to {email}")
 
     for msg in unseen_msgs:
         emit("receive_message", {
@@ -148,7 +147,6 @@ def handle_user_connected(email):
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    print("Message received on backend:", data)
     message = {
         "sender": data["sender"],
         "receiver": data["receiver"],
@@ -177,6 +175,8 @@ def handle_disconnect():
         del online_users[disconnected_user]
         emit('update_online_users', list(online_users.keys()), broadcast=True)
 
-# ================= Main Run ================= #
+# ============ Main for Render ============ #
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    port = int(os.environ.get("PORT", 5000))  # Use Render-provided PORT or 5000 for local dev
+    socketio.run(app, host="0.0.0.0", port=port)
