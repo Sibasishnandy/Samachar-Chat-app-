@@ -9,7 +9,7 @@ export default function Login3d() {
 
   const handleLogin = async () => {
   try {
-    const response = await fetch("http://localhost:5000/login_api", {
+    const response = await fetch("https://samachar-chat-app-uo4y.onrender.com/login_api", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

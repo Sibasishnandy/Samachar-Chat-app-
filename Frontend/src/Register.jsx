@@ -38,7 +38,7 @@ export default function Register() {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/registration_api", {
+      const response = await fetch("https://samachar-chat-app-uo4y.onrender.com/registration_api", {
         method: "POST",
         body: formData,
       });
